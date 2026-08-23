@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAFARI BINGO</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: #0b0914; color: white; font-family: sans-serif; padding: 15px; padding-bottom: 90px; text-align: center; }
+        h1 { font-size: 24px; font-weight: 800; color: #ffca28; margin-bottom: 15px; }
+        .stake-card { background: #151128; border-radius: 20px; padding: 20px; margin-top: 15px; border: 1px solid #231c3d; }
+        .play-btn { background: #00d26a; border: none; color: #000; font-size: 18px; font-weight: bold; padding: 14px; border-radius: 30px; width: 100%; cursor: pointer; margin-top: 15px; }
+        .play-btn:disabled { background: #555; color: #888; cursor: not-allowed; }
+        .balance-label { color: #7f7b97; font-size: 12px; margin-top: 15px; font-weight: 600; }
+        .balance-val { font-size: 32px; font-weight: bold; margin-top: 5px; color: #ffca28; }
+        
+        .bingo-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 10px; max-height: 280px; overflow-y: auto; background: #151128; padding: 10px; border-radius: 12px; }
+        .cell { background: #201a38; border-radius: 6px; padding: 10px 0; font-size: 13px; font-weight: bold; cursor: pointer; border: 1px solid transparent; }
+        .cell.selected { background: #00d26a; color: #000; border-color: #fff; }
+        .cell.drawn { background: #ff9800 !important; color: #000 !important; }
+        
+        .status-box { background: #1d1735; padding: 12px; border-radius: 12px; margin-top: 10px; font-size: 13px; color: #a19dae; }
+        
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0f0c1d; display: flex; justify-content: space-around; padding: 12px 0; border-top: 1px solid #1c1733; z-index: 9999; height: 65px; }
+        .nav-item { color: #6d6985; font-size: 10px; cursor: pointer; font-weight: bold; flex: 1; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .nav-item.active { color: #ffca28; }
+        
+        .tab-screen { display: none; }
+        .tab-screen.active { display: block; }
+        .section-title { font-size: 18px; color: #ffca28; margin-bottom: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>SAFARI BINGO</h1>
+
+    <!-- GAME SCREEN -->
+    <div id="tab-game" class="tab-screen active">
+        <div id="home-screen" class="stake-card">
+            <div style="color: #8c88a5; font-size: 13px; font-weight: 600;">ቁጥሮችዎን ይምረጡ (እስከ 5 ቁጥሮች) እና ጨዋታ ይጀምሩ</div>
+            <div class="bingo-board" id="select-board"></div>
+            <button class="play-btn" id="play-action-btn" onclick="startBingoGame()">▶ PLAY 10 (አስጀምር)</button>
+            <div class="balance-label">WALLET BALANCE</div>
+            <div class="balance-val" id="user-balance">20 ብር</div>
+        </div>
+        <div id="game-screen" style="display:none;">
+            <div class="status-box" id="game-status">ቁጥሮች በመውጣት ላይ ናቸው...</div>
+            <div class="bingo-board" id="play-board"></div>
+            <button class="play-btn" style="background:#ffca28; margin-top:15px;" onclick="resetGame()">🔄 እንደገና ተጫወት</button>
+        </div>
+    </div>
+
+    <!-- SCORES SCREEN -->
+    <div id="tab-scores" class="tab-screen">
+        <div class="section-title">🏆 የዛሬ አሸናፊዎች</div>
+        <div class="stake-card">
+            <p style="margin-bottom:8px;">🥇 አዲሱ - 850 ብር</p>
+            <p style="margin-bottom:8px;">🥈 ሄኖክ - 800 ብር</p>
+            <p>🥉 ዳምጠው - 720 ብር</p>
+        </div>
+    </div>
+
+    <!-- HISTORY SCREEN -->
+    <div id="tab-history" class="tab-screen">
+        <div class="section-title">🕒 የጨዋታ ታሪክ</div>
+        <div class="stake-card">
+            <p style="color: #7f7b97;">የተጫወቷቸው ጨዋታዎች ታሪክ እዚህ ይመዘገባል።</p>
+        </div>
+    </div>
+
+    <!-- WALLET SCREEN -->
+    <div id="tab-wallet" class="tab-screen">
+        <div class="section-title">💼 የኪስ ቦርሳ (Wallet)</div>
+        <div class="stake-card">
+            <div class="balance-label">ቀሪ ሂሳብ</div>
+            <div class="balance-val" id="wallet-balance-val">20 ብር</div>
+            <button class="play-btn" style="background:#ff9800; color:#fff;" onclick="alert('የማስወጣት (Withdrawal) ገደብ ገና አልሞላም!')">ገንዘብ ማውጣት (Withdraw)</button>
+        </div>
+    </div>
+
+    <!-- PROFILE SCREEN -->
+    <div id="tab-profile" class="tab-screen">
+        <div class="section-title">👤 የራሴ መረጃ</div>
+        <div class="stake-card" style="text-align: left;">
+            <p style="margin-bottom:8px;"><b>መለያ (User ID):</b> <span id="tg-id">12345</span></p>
+            <p style="margin-bottom:8px;"><b>የጋበዟቸው ሰዎች:</b> <span id="invite-count-val">0</span> ሰው</p>
+            <p style="margin-bottom:8px;"><b>የተጫወቱት ጨዋታ:</b> <span id="games-played-val">0</span></p>
+            <hr style="border-color: #231c3d; margin: 15px 0;">
+            <p style="font-size: 13px; color: #ffca28; margin-bottom: 5px;">🔗 የጋበዣ ሊንክዎ (1 ሰው = 10 ብር):</p>
+            <input type="text" id="ref-link" readonly style="width:100%; background:#201a38; color:#fff; border:1px solid #3d3463; padding:8px; border-radius:6px; font-size:11px;" value="Loading...">
+            <button class="play-btn" style="font-size: 14px; padding: 10px; margin-top: 10px;" onclick="copyRefLink()">ሊንኩን ኮፒ አድርግ</button>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAVIGATION -->
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="switchTab('game')">🎮<div>GAME</div></div>
+        <div class="nav-item" onclick="switchTab('scores')">🏆<div>SCORES</div></div>
+        <div class="nav-item" onclick="switchTab('history')">🕒<div>HISTORY</div></div>
+        <div class="nav-item" onclick="switchTab('wallet')">💼<div>WALLET</div></div>
+        <div class="nav-item" onclick="switchTab('profile')">👤<div>PROFILE</div></div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        let userId = "12345";
+        if(tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            userId = tg.initDataUnsafe.user.id;
+            document.getElementById('tg-id').innerText = userId;
+        }
+
+        document.getElementById('ref-link').value = `https://t.me/your_bot_username?start=ref_${userId}`;
+
+        let balance = localStorage.getItem(`balance_${userId}`) !== null ? parseInt(localStorage.getItem(`balance_${userId}`)) : 20;
+        let gamesPlayed = localStorage.getItem(`games_${userId}`) !== null ? parseInt(localStorage.getItem(`games_${userId}`)) : 0;
+        let inviteCount = localStorage.getItem(`invites_${userId}`) !== null ? parseInt(localStorage.getItem(`invites_${userId}`)) : 0;
+
+        updateUIValues();
+
+        function updateUIValues() {
+            document.getElementById('user-balance').innerText = balance + " ብር";
+            document.getElementById('wallet-balance-val').innerText = balance + " ብር";
+            document.getElementById('games-played-val').innerText = gamesPlayed;
+            document.getElementById('invite-count-val').innerText = inviteCount;
+
+            let btn = document.getElementById('play-action-btn');
+            if (balance < 10) {
+                if(btn) {
+                    btn.innerText = "⚠️ በቂ ቀሪ ሂሳብ የለም (0 ብር)";
+                    btn.disabled = true;
+                }
+            } else {
+                if(btn) {
+                    btn.innerText = "▶ PLAY 10 (አስጀምር)";
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            const indexMap = {'game': 0, 'scores': 1, 'history': 2, 'wallet': 3, 'profile': 4};
+            document.querySelectorAll('.nav-item')[indexMap[tabName]].classList.add('active');
+        }
+
+        function copyRefLink() {
+            let copyText = document.getElementById("ref-link");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            alert("የጋበዣ ሊንክዎ ተኮፒ ተደርጓል!");
+        }
+
+        const selectBoard = document.getElementById('select-board');
+        let selectedNumbers = [];
+
+        for (let i = 1; i <= 50; i++) {
+            let cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.innerText = i;
+            cell.onclick = function() {
+                if (selectedNumbers.includes(i)) {
+                    selectedNumbers = selectedNumbers.filter(num => num !== i);
+                    cell.classList.remove('selected');
+                } else {
+                    if (selectedNumbers.length >= 5) {
+                        alert('ከ 5 በላይ ቁጥር መምረጥ አይችሉም!');
+                        return;
+                    }
+                    selectedNumbers.push(i);
+                    cell.classList.add('selected');
+                }
+            };
+            selectBoard.appendChild(cell);
+        }
+
+        let names = ["አዲሱ", "ሄኖክ", "ዳምጠው", "ኤላ", "መክሊት"];
+        let prizes = [850, 800, 720, 910, 630];
+
+        function startBingoGame() {
+            if (balance < 10) {
+                alert('የእርስዎ ቀሪ ሂሳብ በቂ አይደለም!');
+                return;
+            }
+            if(selectedNumbers.length === 0) {
+                alert('እባክዎን ቢያንስ 1 ቁጥር ይምረጡ!');
+                return;
+            }
+
+            balance -= 10;
+            gamesPlayed += 1;
+            localStorage.setItem(`balance_${userId}`, balance);
+            localStorage.setItem(`games_${userId}`, gamesPlayed);
+            updateUIValues();
+
+            document.getElementById('home-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            
+            const board = document.getElementById('play-board');
+            board.innerHTML = '';
+            for (let i = 1; i <= 50; i++) {
+                let cell = document.createElement('div');
+                cell.className = 'cell';
+                if(selectedNumbers.includes(i)) cell.classList.add('selected');
+                cell.id = `play-num-${i}`;
+                cell.innerText = i;
+                board.appendChild(cell);
+            }
+
+            let winnerName = names[Math.floor(Math.random() * names.length)];
+            let winnerPrize = prizes[Math.floor(Math.random() * prizes.length)];
+            let count = 0;
+            
+            let interval = setInterval(() => {
+                count++;
+                let randNum = Math.floor(Math.random() * 50) + 1;
+                let cell = document.getElementById(`play-num-${randNum}`);
+                if (cell) cell.classList.add('drawn');
+                document.getElementById('game-status').innerText = `ቁጥሮች በቦቱ በመውጣት ላይ ናቸው... (#${count})`;
+                
+                if (count >= 10) {
+                    clearInterval(interval);
+                    document.getElementById('game-status').innerHTML = 
+                        `<b style="color:#00d26a; font-size:15px;">🎉 Bingo! ደራሽ ደርሷል!</b><br><b>አሸናፊ (ቦቱ):</b> ${winnerName} (${winnerPrize} ብር)`;
+                }
+            }, 700);
+        }
+
+        function resetGame() {
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('home-screen').style.display = 'block';
+            selectedNumbers = [];
+            document.querySelectorAll('#select-board .cell').forEach(c => c.classList.remove('selected'));
+            updateUIValues();
+        }
+    </script>
+</body>
+</html>
