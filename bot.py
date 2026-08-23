@@ -5,7 +5,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # ⚠️ መረጃዎችህን እዚህ አስተካክል
-BOT_TOKEN = "8830629039:AAHz3xUENXP9GSkvC7we3_EvS-uDhRLt0LE"
+BOT_TOKEN = "8301746478:AAG8NBsjPtuZvia-9Ai8UG4WGEYXyJO6yw8"
 WEBAPP_URL = "https://sami37-cpu.github.io/my-bingo-bot/" 
 
 # 6 ቻናሎች (1-5 ግዴታ፤ 6ኛው አማራጭ)
